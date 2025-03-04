@@ -1,0 +1,73 @@
+version: '3.9'
+
+services:
+  web-filemanager-srv:
+    networks:
+      filemanager-server:
+        ipv4_address: 172.18.0.2
+    image: nginx:latest
+    ports:
+      - '127.0.10.2:80:80/tcp'
+    volumes:
+      - ./www:/var/www/html
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+    environment:
+      - TZ=Europe/Budapest
+    tty: true
+    links:
+      - php-srv
+  node-srv:
+    build:
+      dockerfile: nodeDockerfile
+    ports:
+     - '127.0.10.2:8000:8000/tcp'
+    volumes:
+     - ./www:/var/www/html
+    working_dir: "/var/www/html"
+    tty: true
+    links:
+      - php-srv
+    environment:
+      - TZ=Europe/Budapest
+    networks:
+      filemanager-server:
+        ipv4_address: 172.18.0.3
+  php-srv:
+    build:
+      dockerfile: phpDockerfile
+    volumes:
+      - ./www:/var/www/html
+      - ./php.conf:/usr/local/etc/php-fpm.d/www.conf
+    tty: true
+    environment:
+      - TZ=Europe/Budapest
+    networks:
+      filemanager-server:
+        ipv4_address: 172.18.0.4
+    links:
+      - db
+  db:
+    image: mariadb:latest
+    ports:
+    - '3306:3306/tcp'
+    volumes:
+      - './db:/var/lib/mysql'
+    environment:
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
+      - MARIADB_HOST=localhost
+      - MARIADB_DATABASE=filemanager
+      - MARIADB_USER=dominik
+      - MARIADB_PASSWORD=1234
+      - TZ=Europe/Budapest
+    networks:
+      filemanager-server:
+        ipv4_address: 172.18.0.5
+networks:
+  filemanager-server:
+    driver: bridge
+    enable_ipv6: false
+    name: filemanager-network
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
